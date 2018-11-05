@@ -1,0 +1,3 @@
+cnn/*.pkl
+rnn/*.pkl
+feedforward/*.pkl
