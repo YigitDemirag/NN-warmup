@@ -26,9 +26,9 @@ test_load = torch.utils.data.DataLoader(test_data, batch_size, shuffle=True, num
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Define the model class
-class ffNet(nn.Module):
+class convNet(nn.Module):
     def __init__(self, input_size, output_size):
-        super(ffNet, self).__init__()
+        super(convNet, self).__init__()
         self.conv1 = nn.Conv2d(1, num_filter, filter_size, stride_size, padding_size) # O: 28 x 28 x 16
         self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(max_pool_size) # O: 14 x 14 x 16
@@ -49,7 +49,7 @@ class ffNet(nn.Module):
         return out
 
 # Define network
-net = ffNet(28*28, 10)
+net = convNet(28*28, 10)
 # Defile loss
 criterion = torch.nn.CrossEntropyLoss()
 # Define optimizer
