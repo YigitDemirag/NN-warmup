@@ -1,2 +1,8 @@
 *.pkl
 *-ubyte
+*.pyc
+__pycache__
+data/
+RL.egg-info/
+*.json
+*.mp4
