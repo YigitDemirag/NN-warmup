@@ -47,19 +47,14 @@ def vpg(env_fn, seed=0, logger_kwargs=dict()):
         logger.dump_tabular()
     env.close()
 
-
-
 if __name__ == '__main__':
     import argparse
+    from RL.utils.run_utils import setup_logger_kwargs
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='LunarLander-v2')
     parser.add_argument('--cpu', type=int, default=4)
     args = parser.parse_args()
-    
-    mpi_fork(args.cpu)
-    
-    from RL.utils.run_utils import setup_logger_kwargs
-
     logger_kwargs = setup_logger_kwargs('vpg', 0)
+    mpi_fork(args.cpu)
     
     vpg(lambda: gym.make(args.env), seed=0, logger_kwargs=logger_kwargs)
