@@ -1,6 +1,6 @@
 *.pkl
 *-ubyte
-*.pyc
+*/*.pyc
 __pycache__
 data/
 RL.egg-info/
