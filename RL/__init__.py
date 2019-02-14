@@ -3,6 +3,9 @@
 #from RL.agents.sac.sac import sac
 from RL.agents.vpg.vpg import vpg
 
+# Core Features
+from RL.agents.core import ReplayBuffer
+
 # Loggers
 from RL.utils.logx import Logger, EpochLogger
 

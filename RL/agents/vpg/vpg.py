@@ -6,39 +6,12 @@ import numpy as np
 from RL.utils.logx import EpochLogger
 from RL.utils.mpi_torch import average_gradients, sync_all_params
 from RL.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
+from RL.agents.core import ReplayBuffer
 
 # Hyperparameters
 epochs = 100
 steps_per_epoch = 1000
 
-class ReplayBuffer:
-    def __init__(self, size, obs_dim, act_dim):
-        self.size = size
-        self.o_buff = np.zeros((size, *obs_dim), dtype=np.float32)
-        self.a_buff = np.zeros((size, *act_dim), dtype=np.float32)
-        self.rew_buff = np.zeros((size), dtype=np.float32)
-        self.val_buff = np.zeros((size), dtype=np.float32)
-        self.ptr = 0
-
-    def read(self):
-        """
-        Read from the replay buffer and reset its content.
-        """
-        self.ptr = 0
-        return [self.o_buff, self.a_buff, self.rew_buff, self.val_buff] 
-
-    def write(self, obs, act, rew, val):
-        """
-        Write to replay buffer after every interaction.
-        """
-        if self.size == self.ptr:
-            self.ptr = 0 
-        
-        self.o_buff[self.ptr] = obs
-        self.a_buff[self.ptr] = act
-        self.rew_buff[self.ptr] = rew # The reward agent currently helds, not the one it will get after act in obs.
-        self.val_buff[self.ptr] = val
-        self.ptr += 1
 
 def vpg(env_fn, seed=0, logger_kwargs=dict()):
     """
