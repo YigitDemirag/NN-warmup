@@ -2,16 +2,17 @@ import sys
 import gym
 import time
 import numpy as np
+import torch 
+import torch.nn as nn
 
 from RL.utils.logx import EpochLogger
 from RL.utils.mpi_torch import average_gradients, sync_all_params
 from RL.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
-from RL.agents.core import ReplayBuffer
+from RL.agents.model import ReplayBuffer, MLP
 
 # Hyperparameters
 epochs = 100
 steps_per_epoch = 1000
-
 
 def vpg(env_fn, seed=0, logger_kwargs=dict()):
     """
@@ -28,7 +29,11 @@ def vpg(env_fn, seed=0, logger_kwargs=dict()):
     done = False
     ep_ret = ep_len = r = val = 0
     start_time = time.time()
-    
+
+####
+# DELETE LATER
+    mlp = MLP(env.observation_space.shape, (32,64,4), activation=torch.tanh) 
+###
     # Agent in the Wild 
     for epoch in range(epochs):
         s = env.reset()

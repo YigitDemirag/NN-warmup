@@ -4,7 +4,7 @@
 from RL.agents.vpg.vpg import vpg
 
 # Core Features
-from RL.agents.core import ReplayBuffer
+from RL.agents.model import ReplayBuffer
 
 # Loggers
 from RL.utils.logx import Logger, EpochLogger
