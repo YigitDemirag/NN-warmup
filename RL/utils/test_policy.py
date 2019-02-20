@@ -20,7 +20,7 @@ def load_policy(fpath, itr='last'):
     model.eval()
 
     # get the model's policy
-    get_action = model.policy
+    get_action = model.p_net
 
     # try to load environment from save
     # (sometimes this will fail because the environment could not be pickled)

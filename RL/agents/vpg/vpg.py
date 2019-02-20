@@ -24,23 +24,23 @@ def vpg(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
     logger.save_config(locals())
     
     # Update the seed
-    seed = 1000 * proc_id()
-    torch.manual_seed(seed)
-
-    env = env_fn()
-    obs_dim = env.observation_space.shape
-    act_dim = env.action_space.shape
-
+    torch.manual_seed(1000*proc_id())
+    
     local_steps_per_epoch = int(steps_per_epoch/num_procs())
     
-    actor_critic = mlp_actor_critic(obs_dim, act_dim, action_space=env.action_space)
+    env = env_fn()
+    actor_critic = mlp_actor_critic(env.observation_space.shape, env.action_space.shape, action_space=env.action_space)
     rb = ReplayBuffer(local_steps_per_epoch, env.observation_space.shape, env.action_space.shape)
     
-    # Optimizer
+    # Optimizers
     p_optimizer = torch.optim.Adam(actor_critic.p_net.parameters(), lr = 3e-4)
     v_optimizer = torch.optim.Adam(actor_critic.v_net.parameters(), lr = 1e-3)
     sync_all_params(actor_critic.parameters())
 
+    # Initializations
+    ep_ret, ep_len, r, val, done = 0, 0, 0, 0, False
+    start_time = time.time()
+    
     def update():
         o, logp, a, _, rew2g, val, adv = rb.read()
         _, logp, _, val = actor_critic(o,a) 
@@ -55,9 +55,6 @@ def vpg(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
         v_loss.backward()
         v_optimizer.step()
 
-    # Initializations
-    ep_ret, ep_len, r, val, done = 0, 0, 0, 0, False
-    start_time = time.time()
 
     # Agent in the Wild 
     for epoch in range(epochs):
@@ -75,7 +72,10 @@ def vpg(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
             if done or t==local_steps_per_epoch:
                 logger.store(EpRet=ep_ret, EpLen=ep_len)
                 obs, r, done, ep_ret, ep_len = env.reset(), 0,  False, 0, 0
-
+        
+        # Save model
+        if (epoch % 20 == 0) or (epoch == epochs-1):
+            logger.save_state({'env': env}, actor_critic, None)
 
         update()
         # Logger Monitor

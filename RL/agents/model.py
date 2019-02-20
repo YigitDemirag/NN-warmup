@@ -29,7 +29,7 @@ class ReplayBuffer:
         """
         Read from the replay buffer in any random time..
         """
-        self.calc_advantage()
+        self.gae_lamb_adv()
         tmp = [self.o_buff, self.logp_buff, self.a_buff, self.rew_buff, self.rew2g_buff, self.val_buff, self.adv_buff]
         return [torch.Tensor(x) for x in tmp]
    
@@ -54,7 +54,7 @@ class ReplayBuffer:
         """
         return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
     
-    def calc_advantage(self, last_val=0):
+    def gae_lamb_adv(self, last_val=0):
         """
         Calculate GAE-lambda advantage function 
         """

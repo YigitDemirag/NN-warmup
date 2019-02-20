@@ -7,6 +7,7 @@ Logs to a tab-separated-values file (path/to/output_directory/progress.txt)
 """
 import json
 import joblib
+import torch
 import shutil
 import numpy as np
 import os.path as osp, time, atexit, os
@@ -240,3 +241,55 @@ class EpochLogger(Logger):
         v = self.epoch_dict[key]
         vals = np.concatenate(v) if isinstance(v[0], np.ndarray) and len(v[0].shape)>0 else v
         return mpi_statistics_scalar(vals)
+
+    def save_config(self, config):
+        """
+        Log an experiment configuration.
+        Call this once at the top of your experiment, passing in all important
+        config vars as a dict. This will serialize the config to JSON, while
+        handling anything which can't be serialized in a graceful way (writing
+        as informative a string as possible).
+        Example use:
+        .. code-block:: python
+            logger = EpochLogger(**logger_kwargs)
+            logger.save_config(locals())
+        """
+        config_json = convert_json(config)
+        if self.exp_name is not None:
+            config_json['exp_name'] = self.exp_name
+        if proc_id()==0:
+            output = json.dumps(config_json, separators=(',',':\t'), indent=4, sort_keys=True)
+            print(colorize('Saving config:\n', color='cyan', bold=True))
+            print(output)
+            with open(osp.join(self.output_dir, "config.json"), 'w') as out:
+                out.write(output)
+
+    def save_state(self, state_dict, model, itr=None):
+        """
+        Saves the state of an experiment.
+        To be clear: this is about saving *state*, not logging diagnostics.
+        All diagnostic logging is separate from this function. This function
+        will save whatever is in ``state_dict``---usually just a copy of the
+        environment---and the most recent copy of the model via ``model``.
+        Call with any frequency you prefer. If you only want to maintain a
+        single state and overwrite it at each call with the most recent
+        version, leave ``itr=None``. If you want to keep all of the states you
+        save, provide unique (increasing) values for 'itr'.
+        Args:
+            state_dict (dict): Dictionary containing essential elements to
+                describe the current state of training.
+            model (nn.Module): A model which contains the policy.
+            itr: An int, or None. Current iteration of training.
+        """
+        if proc_id()==0:
+            fname = 'vars.pkl' if itr is None else 'vars%d.pkl'%itr
+            try:
+                joblib.dump(state_dict, osp.join(self.output_dir, fname))
+            except:
+                self.log('Warning: could not pickle state_dict.', color='red')
+            self._torch_save(model, itr)
+
+    def _torch_save(self, model, itr=None):
+        if proc_id()==0:
+            fname = 'torch_save.pt' if itr is None else 'torch_save%d.pt'%itr
+            torch.save(model, osp.join(self.output_dir, fname))
