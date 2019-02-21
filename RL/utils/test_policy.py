@@ -54,17 +54,20 @@ def run_policy(env, get_action, get_value, max_ep_len=None, num_episodes=100, re
     if nn_visual:
         # Prepare canvas
         fig = plt.figure()
-        ax = fig.add_subplot(111)
+        ax1 = fig.add_subplot(2,1,1)
+        ax2 = fig.add_subplot(2,1,2)
         fig.canvas.draw()
-        x = np.linspace(1, 10000, num=10000)
-        h, = ax.plot(x, lw=3)
-        text = ax.text(0.8,1.5, "")
-        ax.set_ylim([-20,20])
-        plt.xlabel('Interactions')
-        plt.ylabel('Value network')
-        axbackground = fig.canvas.copy_from_bbox(ax.bbox)
-        vlist = np.empty(10000) * np.nan
-   
+        x = np.linspace(1, 1000, num=1000)
+        h1, = ax1.plot(x, lw=3)
+        h2, = ax2.plot(x, lw=3)
+        ax1.set_ylabel('Value network')
+        ax2.set_ylabel('Reward')
+        ax2.set_xlabel('Interactions')
+        axbackground1 = fig.canvas.copy_from_bbox(ax1.bbox)
+        axbackground2 = fig.canvas.copy_from_bbox(ax2.bbox)
+        vlist = np.empty(1000) * np.nan
+        rlist = np.empty(1000) * np.nan
+
     while n < num_episodes:
         if render:
             env.render()
@@ -74,17 +77,25 @@ def run_policy(env, get_action, get_value, max_ep_len=None, num_episodes=100, re
         if nn_visual:
             v = get_value(torch.Tensor(o.reshape(1,-1)))[0]
             if cnt > 0:
-                ax.set_ylim([int(np.nanmin(vlist))-5, int(np.nanmax(vlist))+5])
-                #ax.set_ylim([-20,20])
-                ax.set_xlim([cnt-100, cnt+100])
+                ax1.set_ylim([int(np.nanmin(vlist))-2, int(np.nanmax(vlist))+2])
+                ax1.set_xlim([cnt-100, cnt+100])
+                ax2.set_ylim([int(np.nanmin(rlist))-5, int(np.nanmax(rlist))+5])
+                ax2.set_xlim([cnt-100, cnt+100])
             vlist[cnt] = v.item()
+            rlist[cnt] = r
             cnt += 1
-            h.set_ydata(vlist)
-            fig.canvas.restore_region(axbackground)
-            ax.draw_artist(h)
+            h1.set_ydata(vlist)
+            fig.canvas.restore_region(axbackground1)
+            ax1.draw_artist(h1)
+            fig.canvas.blit(ax1.bbox)
+            h2.set_ydata(rlist)
+            fig.canvas.restore_region(axbackground2)
+            ax2.draw_artist(h2)
+            fig.canvas.blit(ax2.bbox)
             plt.pause(0.000000000001)
 
         o, r, d, _ = env.step(a.data.numpy()[0])
+        
         ep_ret += r
         ep_len += 1
 
