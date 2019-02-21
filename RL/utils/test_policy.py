@@ -79,7 +79,8 @@ def run_policy(env, get_action, get_value, max_ep_len=None, num_episodes=100, re
             cnt += 1
             h1.set_ydata(vlist)
             text.set_x(cnt+60)
-            text.set_text("Reward: "+ str(round(r,2)))
+            text.set_y(int(np.nanmax(vlist))+1.05)
+            text.set_text("Reward: "+ str(round(ep_ret,2)))
             fig.canvas.restore_region(axbackground1)
             ax1.draw_artist(h1)
             fig.canvas.blit(ax1.bbox)
