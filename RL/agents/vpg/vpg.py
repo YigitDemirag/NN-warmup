@@ -11,10 +11,6 @@ from RL.utils.mpi_torch import average_gradients, sync_all_params
 from RL.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 from RL.agents.model import ReplayBuffer, mlp_actor_critic
 
-# Hyperparameters
-epochs = 100
-steps_per_epoch = 1000
-
 def vpg(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict()):
     """
     Vanilla Policy Gradient Algorithm implemented with GAE-lambda advantage function.
@@ -25,7 +21,9 @@ def vpg(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
     
     # Update the seed
     torch.manual_seed(1000*proc_id())
-    
+   
+
+    epochs, steps_per_epoch = 1000, 1000
     local_steps_per_epoch = int(steps_per_epoch/num_procs())
     
     env = env_fn()
@@ -44,7 +42,7 @@ def vpg(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
     def update():
         o, logp, a, _, rew2g, val, adv = rb.read()
         _, logp, _, val = actor_critic(o,a) 
-       
+      
         p_loss = -(logp * adv).mean()
         p_optimizer.zero_grad()
         p_loss.backward()
@@ -94,6 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--env', type=str, default='LunarLander-v2')
     parser.add_argument('--cpu', type=int, default=4)
     parser.add_argument('--hid', type=int, default=64)
+    parser.add_argument('--epochs', type=int, default=100)
     args = parser.parse_args()
     logger_kwargs = setup_logger_kwargs('vpg', 0)
     mpi_fork(args.cpu)
