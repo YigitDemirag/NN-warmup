@@ -54,19 +54,15 @@ def run_policy(env, get_action, get_value, max_ep_len=None, num_episodes=100, re
     if nn_visual:
         # Prepare canvas
         fig = plt.figure()
-        ax1 = fig.add_subplot(2,1,1)
-        ax2 = fig.add_subplot(2,1,2)
+        ax1 = fig.add_subplot(111)
         fig.canvas.draw()
         x = np.linspace(1, 1000, num=1000)
         h1, = ax1.plot(x, lw=3)
-        h2, = ax2.plot(x, lw=3)
+        text = plt.text(60, 1.1, "Reward:")
         ax1.set_ylabel('Value network')
-        ax2.set_ylabel('Reward')
-        ax2.set_xlabel('Interactions')
+        ax1.set_xlabel('Interactions')
         axbackground1 = fig.canvas.copy_from_bbox(ax1.bbox)
-        axbackground2 = fig.canvas.copy_from_bbox(ax2.bbox)
         vlist = np.empty(1000) * np.nan
-        rlist = np.empty(1000) * np.nan
 
     while n < num_episodes:
         if render:
@@ -77,21 +73,16 @@ def run_policy(env, get_action, get_value, max_ep_len=None, num_episodes=100, re
         if nn_visual:
             v = get_value(torch.Tensor(o.reshape(1,-1)))[0]
             if cnt > 0:
-                ax1.set_ylim([int(np.nanmin(vlist))-2, int(np.nanmax(vlist))+2])
+                ax1.set_ylim([int(np.nanmin(vlist))-1, int(np.nanmax(vlist))+1])
                 ax1.set_xlim([cnt-100, cnt+100])
-                ax2.set_ylim([int(np.nanmin(rlist))-5, int(np.nanmax(rlist))+5])
-                ax2.set_xlim([cnt-100, cnt+100])
             vlist[cnt] = v.item()
-            rlist[cnt] = r
             cnt += 1
             h1.set_ydata(vlist)
+            text.set_x(cnt+60)
+            text.set_text("Reward: "+ str(round(r,2)))
             fig.canvas.restore_region(axbackground1)
             ax1.draw_artist(h1)
             fig.canvas.blit(ax1.bbox)
-            h2.set_ydata(rlist)
-            fig.canvas.restore_region(axbackground2)
-            ax2.draw_artist(h2)
-            fig.canvas.blit(ax2.bbox)
             plt.pause(0.000000000001)
 
         o, r, d, _ = env.step(a.data.numpy()[0])
@@ -102,9 +93,10 @@ def run_policy(env, get_action, get_value, max_ep_len=None, num_episodes=100, re
         if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             print('Episode %d \t EpRet %.3f \t EpLen %d'%(n, ep_ret, ep_len))
-            o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+            o, r, d, ep_ret, ep_len, cnt, vlist = env.reset(), 0, False, 0, 0, 0, np.empty(1000)*np.nan
             n += 1
-
+    
+    #vlist, cnt = np.empty(1000)*np.nan, 0
     logger.log_tabular('EpRet', with_min_and_max=True)
     logger.log_tabular('EpLen', average_only=True)
     logger.dump_tabular()
