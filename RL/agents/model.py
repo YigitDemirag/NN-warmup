@@ -14,7 +14,7 @@ class ReplayBuffer:
     def __init__(self, size, obs_dim, act_dim):
         self.size = size
         self.o_buff = np.zeros((size, *obs_dim), dtype=np.float32)
-        self.logp_buff = torch.zeros((size, *act_dim), dtype=torch.float32) 
+        self.logp_buff = np.zeros((size, *act_dim), dtype=np.float32) 
         self.a_buff = np.zeros((size, *act_dim), dtype=np.float32)
         self.rew_buff = np.zeros((size), dtype=np.float32)
         self.rew2g_buff = np.zeros((size), dtype=np.float32)
@@ -42,10 +42,10 @@ class ReplayBuffer:
             self.ptr = 0 
         
         self.o_buff[self.ptr] = obs
-        self.logp_buff[self.ptr] = logp
-        self.a_buff[self.ptr] = act
+        self.logp_buff[self.ptr] = logp.detach().numpy()
+        self.a_buff[self.ptr] = act.detach().numpy()
         self.rew_buff[self.ptr] = rew # The reward agent currently helds, not the one it will get after act in obs.
-        self.val_buff[self.ptr] = val
+        self.val_buff[self.ptr] = val.detach().numpy()
         self.ptr += 1
 
     def discount_cumsum(self, x, discount):

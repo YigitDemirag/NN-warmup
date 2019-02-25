@@ -1,5 +1,5 @@
 # Algorithms
-#from RL.agents.ppo.ppo import ppo
+from RL.agents.ppo.ppo import ppo
 #from RL.agents.sac.sac import sac
 from RL.agents.vpg.vpg import vpg
 
