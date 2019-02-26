@@ -20,9 +20,10 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
     logger.save_config(locals())
     
     # Update the seed
-    torch.manual_seed(1000*proc_id())
+    seed += 1000*proc_id()
+    torch.manual_seed(seed)
 
-    epochs, steps_per_epoch = 300, 1000
+    epochs, steps_per_epoch = 1000, 1000
     local_steps_per_epoch = int(steps_per_epoch/num_procs())
     
     env = env_fn()
@@ -46,7 +47,9 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
         for epoch in range(PPO_EPOCHS):
             _, logp, _, val = actor_critic(o,a)
             ratio = (logp - logp_old).exp() # Ratio of policies
-            if (logp_old - logp).mean() > 1.5 * target_kl: # Put additional KL-div limit between consequent policies
+            kl = (logp_old - logp).mean()
+            kl = mpi_avg(kl.item())
+            if kl > 1.5 * target_kl: # Put additional KL-div limit between consequent policies
                 break
             
             p_loss = -torch.min(ratio * adv, torch.clamp(ratio, 1-eps, 1+eps) * adv).mean()

@@ -133,7 +133,7 @@ class mlp_gaussian_policy(nn.Module):
 
 
 class mlp_actor_critic(nn.Module):
-    def __init__(self, x, a, hidden_sizes=(32,32), activation=torch.tanh, 
+    def __init__(self, x, a, hidden_sizes=(64,64), activation=torch.tanh, 
         output_activation=None, policy=None, action_space=None):
         super(mlp_actor_critic, self).__init__()
         
