@@ -22,7 +22,7 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
     # Update the seed
     torch.manual_seed(1000*proc_id())
 
-    epochs, steps_per_epoch = 1000, 1000
+    epochs, steps_per_epoch = 300, 1000
     local_steps_per_epoch = int(steps_per_epoch/num_procs())
     
     env = env_fn()
@@ -36,30 +36,32 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
 
     # Initializations
     eps = 0.2
+    PPO_EPOCHS = 80
     ep_ret, ep_len, r, val, done = 0, 0, 0, 0, False
     start_time = time.time()
     
     def update():
-        o, logp_old, a, _, rew2g, val, adv = rb.read()
-        _, logp, _, val = actor_critic(o,a) 
-     
-        ratio = (logp - logp_old).exp()
-        p_loss = -torch.min(ratio * adv, torch.clamp(ratio, 1-eps, 1+eps) * adv).mean()
-        p_optimizer.zero_grad()
-        p_loss.backward()
-        p_optimizer.step()
+        o, logp_old, a, _, rew2g, val, adv = rb.read(on_policy=True)
+        for epoch in range(PPO_EPOCHS):
+            _, logp, _, val = actor_critic(o,a)
+            ratio = (logp - logp_old).exp()
+            
+            p_loss = -torch.min(ratio * adv, torch.clamp(ratio, 1-eps, 1+eps) * adv).mean()
+            p_optimizer.zero_grad()
+            p_loss.backward()
+            p_optimizer.step()
 
-        v_loss = (val - rew2g).pow(2).mean()
-        v_optimizer.zero_grad()
-        v_loss.backward()
-        v_optimizer.step()
+            v_loss = (val - rew2g).pow(2).mean()
+            v_optimizer.zero_grad()
+            v_loss.backward()
+            v_optimizer.step()
 
     # Agent in the Wild 
     for epoch in range(epochs):
         obs = env.reset()
         for t in range(local_steps_per_epoch):
             #env.render()
-            a, _, logp, v = actor_critic(torch.FloatTensor(obs))
+            a, _, logp, v = actor_critic(torch.Tensor(obs))
             rb.write(obs, logp, a, r, v)
             obs, r, done, _ = env.step(a.detach().numpy())
             
@@ -91,7 +93,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='LunarLander-v2')
     parser.add_argument('--cpu', type=int, default=4)
-    parser.add_argument('--hid', type=int, default=64)
+    parser.add_argument('--hid', type=int, default=32)
     parser.add_argument('--epochs', type=int, default=100)
     args = parser.parse_args()
     logger_kwargs = setup_logger_kwargs('ppo', 0)

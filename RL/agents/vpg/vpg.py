@@ -23,7 +23,7 @@ def vpg(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
     torch.manual_seed(1000*proc_id())
    
 
-    epochs, steps_per_epoch = 1000, 1000
+    epochs, steps_per_epoch = 300, 1000
     local_steps_per_epoch = int(steps_per_epoch/num_procs())
     
     env = env_fn()

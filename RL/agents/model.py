@@ -22,15 +22,23 @@ class ReplayBuffer:
         self.adv_buff = np.zeros((size), dtype=np.float32)
         self.start_ptr = 0
         self.gamma = 0.99
-        self.lam = 0.95
+        self.lam = 0.97
         self.ptr = 0
 
-    def read(self):
+    def read(self, on_policy=True):
         """
         Read from the replay buffer in any random time..
         """
         self.gae_lamb_adv()
-        tmp = [self.o_buff, self.logp_buff, self.a_buff, self.rew_buff, self.rew2g_buff, self.val_buff, self.adv_buff]
+        if on_policy:
+            sl = slice(self.start_ptr, self.ptr)
+            tmp = [self.o_buff[sl], self.logp_buff[sl], self.a_buff[sl], 
+                    self.rew_buff[sl], self.rew2g_buff[sl], self.val_buff[sl], self.adv_buff[sl]]     
+        else:
+            tmp = [self.o_buff, self.logp_buff, self.a_buff, 
+                    self.rew_buff, self.rew2g_buff, self.val_buff, self.adv_buff]
+
+        self.start_ptr = self.ptr
         return [torch.Tensor(x) for x in tmp]
    
     def write(self, obs, logp, act, rew, val):
@@ -72,8 +80,6 @@ class ReplayBuffer:
         # Normalize A with mu=0, std=1
         adv_mean, adv_std = mpi_statistics_scalar(self.adv_buff)
         self.adv_buff = (self.adv_buff-adv_mean)/adv_std
-
-        self.start_ptr = self.ptr
 
 class MLP(nn.Module):
     def __init__(self, x, hidden_sizes=(32,32), activation=torch.tanh, output_activation=None):
@@ -127,7 +133,7 @@ class mlp_gaussian_policy(nn.Module):
 
 
 class mlp_actor_critic(nn.Module):
-    def __init__(self, x, a, hidden_sizes=(64,64), activation=torch.tanh, 
+    def __init__(self, x, a, hidden_sizes=(32,32), activation=torch.tanh, 
         output_activation=None, policy=None, action_space=None):
         super(mlp_actor_critic, self).__init__()
         
