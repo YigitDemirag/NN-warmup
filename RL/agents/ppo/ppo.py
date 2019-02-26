@@ -36,7 +36,8 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
 
     # Initializations
     eps = 0.2
-    PPO_EPOCHS = 80
+    target_kl = 0.01
+    PPO_EPOCHS = 50
     ep_ret, ep_len, r, val, done = 0, 0, 0, 0, False
     start_time = time.time()
     
@@ -44,7 +45,9 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
         o, logp_old, a, _, rew2g, val, adv = rb.read(on_policy=True)
         for epoch in range(PPO_EPOCHS):
             _, logp, _, val = actor_critic(o,a)
-            ratio = (logp - logp_old).exp()
+            ratio = (logp - logp_old).exp() # Ratio of policies
+            if (logp_old - logp).mean() > 1.5 * target_kl: # Put additional KL-div limit between consequent policies
+                break
             
             p_loss = -torch.min(ratio * adv, torch.clamp(ratio, 1-eps, 1+eps) * adv).mean()
             p_optimizer.zero_grad()
