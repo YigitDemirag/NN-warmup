@@ -7,3 +7,4 @@ RL.egg-info/
 *.json
 *.mp4
 *.swp
+*.pyc
