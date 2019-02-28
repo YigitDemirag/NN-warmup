@@ -11,7 +11,8 @@ from RL.utils.mpi_torch import average_gradients, sync_all_params
 from RL.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 from RL.agents.model import ReplayBuffer, mlp_actor_critic
 
-def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict()):
+def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, steps_per_epoch=4000, 
+        epochs=50, clip=0.2, p_lr=3e-4, v_lr=1e-3, ppo_epochs=80, target_kl=0.01, logger_kwargs=dict(), save_freq=10):
     """
     Proximal Policy Optimization implemented with GAE-lambda advantage function.
     """
@@ -23,7 +24,6 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
     seed += 1000*proc_id()
     torch.manual_seed(seed)
 
-    epochs, steps_per_epoch = 1000, 1000
     local_steps_per_epoch = int(steps_per_epoch/num_procs())
     
     env = env_fn()
@@ -31,28 +31,26 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
     rb = ReplayBuffer(local_steps_per_epoch, env.observation_space.shape, env.action_space.shape)
     
     # Optimizers
-    p_optimizer = torch.optim.Adam(actor_critic.p_net.parameters(), lr = 3e-4)
-    v_optimizer = torch.optim.Adam(actor_critic.v_net.parameters(), lr = 1e-3)
+    p_optimizer = torch.optim.Adam(actor_critic.p_net.parameters(), lr=p_lr)
+    v_optimizer = torch.optim.Adam(actor_critic.v_net.parameters(), lr=v_lr)
     sync_all_params(actor_critic.parameters())
 
     # Initializations
-    eps = 0.2
-    target_kl = 0.01
-    PPO_EPOCHS = 50
     ep_ret, ep_len, r, val, done = 0, 0, 0, 0, False
     start_time = time.time()
     
     def update():
         o, logp_old, a, _, rew2g, val, adv = rb.read(on_policy=True)
-        for epoch in range(PPO_EPOCHS):
+        for epoch in range(ppo_epochs):
             _, logp, _, val = actor_critic(o,a)
             ratio = (logp - logp_old).exp() # Ratio of policies
+            
             kl = (logp_old - logp).mean()
             kl = mpi_avg(kl.item())
             if kl > 1.5 * target_kl: # Put additional KL-div limit between consequent policies
                 break
             
-            p_loss = -torch.min(ratio * adv, torch.clamp(ratio, 1-eps, 1+eps) * adv).mean()
+            p_loss = -torch.min(ratio * adv, torch.clamp(ratio, 1-clip, 1+clip) * adv).mean()
             p_optimizer.zero_grad()
             p_loss.backward()
             p_optimizer.step()
@@ -70,17 +68,19 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=dict(
             a, _, logp, v = actor_critic(torch.Tensor(obs))
             rb.write(obs, logp, a, r, v)
             obs, r, done, _ = env.step(a.detach().numpy())
-            
             ep_ret += r
             ep_len += 1
             
-            # Terminal state
-            if done or t==local_steps_per_epoch:
-                logger.store(EpRet=ep_ret, EpLen=ep_len)
+            # Save r,v at terminal states
+            if done or t==local_steps_per_epoch-1:
+                v_d = r if done else actor_critic.v_net(torch.Tensor(obs)).item()
+                rb.calc_adv(v_d)
+                if done:
+                    logger.store(EpRet=ep_ret, EpLen=ep_len)
                 obs, r, done, ep_ret, ep_len = env.reset(), 0,  False, 0, 0
         
         # Save model
-        if (epoch % 20 == 0) or (epoch == epochs-1):
+        if (epoch % save_freq == 0) or (epoch == epochs-1):
             logger.save_state({'env': env}, actor_critic, None)
 
         update()
@@ -98,11 +98,14 @@ if __name__ == '__main__':
     from RL.utils.run_utils import setup_logger_kwargs
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='LunarLander-v2')
-    parser.add_argument('--cpu', type=int, default=4)
+    parser.add_argument('--cpu', type=int, default=8)
     parser.add_argument('--hid', type=int, default=32)
     parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--exp_name', type=str, default='ppo')
     args = parser.parse_args()
-    logger_kwargs = setup_logger_kwargs('ppo', 0)
-    mpi_fork(args.cpu)
+    logger_kwargs = setup_logger_kwargs(args.exp_name, "0")
     
-    ppo(lambda: gym.make(args.env), actor_critic=model.mlp_actor_critic, seed=0, logger_kwargs=logger_kwargs)
+    mpi_fork(args.cpu)
+   
+    ppo(lambda: gym.make(args.env), actor_critic=model.mlp_actor_critic, seed=0, steps_per_epoch=4000, 
+        epochs=50, clip=0.2, p_lr=3e-4, v_lr=1e-3, ppo_epochs=80, target_kl=0.01, logger_kwargs=dict(), save_freq=10)

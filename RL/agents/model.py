@@ -14,8 +14,8 @@ class ReplayBuffer:
     def __init__(self, size, obs_dim, act_dim):
         self.size = size
         self.o_buff = np.zeros((size, *obs_dim), dtype=np.float32)
-        self.logp_buff = np.zeros((size, *act_dim), dtype=np.float32) 
         self.a_buff = np.zeros((size, *act_dim), dtype=np.float32)
+        self.logp_buff = np.zeros((size), dtype=np.float32) 
         self.rew_buff = np.zeros((size), dtype=np.float32)
         self.rew2g_buff = np.zeros((size), dtype=np.float32)
         self.val_buff = np.zeros((size), dtype=np.float32)
@@ -29,12 +29,12 @@ class ReplayBuffer:
         """
         Read from the replay buffer in any random time..
         """
-        self.gae_lamb_adv()
-        if on_policy:
+        #self.gae_lamb_adv()
+        if on_policy: # Returns the experience gathered with the latest policy.
             sl = slice(self.start_ptr, self.ptr)
             tmp = [self.o_buff[sl], self.logp_buff[sl], self.a_buff[sl], 
                     self.rew_buff[sl], self.rew2g_buff[sl], self.val_buff[sl], self.adv_buff[sl]]     
-        else:
+        else: # Returns the all experience buffer.
             tmp = [self.o_buff, self.logp_buff, self.a_buff, 
                     self.rew_buff, self.rew2g_buff, self.val_buff, self.adv_buff]
 
@@ -62,7 +62,7 @@ class ReplayBuffer:
         """
         return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
     
-    def gae_lamb_adv(self, last_val=0):
+    def calc_adv(self, last_val=0):
         """
         Calculate GAE-lambda advantage function 
         """
@@ -82,7 +82,7 @@ class ReplayBuffer:
         self.adv_buff = (self.adv_buff-adv_mean)/adv_std
 
 class MLP(nn.Module):
-    def __init__(self, x, hidden_sizes=(32,32), activation=torch.tanh, output_activation=None):
+    def __init__(self, x, hidden_sizes, activation=torch.tanh, output_activation=None):
         super(MLP, self).__init__()
         self.activation = activation
         self.output_activation = output_activation
@@ -127,22 +127,24 @@ class mlp_gaussian_policy(nn.Module):
         policy = Normal(mu, self.log_std.exp())
 
         pi = policy.sample()
-        logp = policy.log_prob(a) if torch.is_tensor(a) else None
-        logp_pi = policy.log_prob(pi)
+        logp = policy.log_prob(a).sum(dim=1)  if torch.is_tensor(a) else None 
+        logp_pi = policy.log_prob(pi).sum()
         return pi, logp, logp_pi
 
-
+"""
+MLP Actor-Critic
+"""
 class mlp_actor_critic(nn.Module):
     def __init__(self, x, a, hidden_sizes=(64,64), activation=torch.tanh, 
-        output_activation=None, policy=None, action_space=None):
+        output_activation=None, action_space=None):
         super(mlp_actor_critic, self).__init__()
         
         # Policy Network 
-        if policy is None and isinstance(action_space, Box):
-            print('Policy is None and action_space is Box.')
+        if isinstance(action_space, Box):
+            print('Policy is Gaussian and action_space is Box.')
             self.p_net = mlp_gaussian_policy(x, a, hidden_sizes, activation, output_activation, action_space)
-        elif policy is None and isinstance(action_space, Discrete):
-            print('Policy is None and action_space is Discrete.')
+        elif isinstance(action_space, Discrete):
+            print('Policy is Categorical and action_space is Discrete.')
             self.p_net = mlp_categorical_policy(x, a, hidden_sizes, activation, output_activation, action_space)
 
         # Value Network
