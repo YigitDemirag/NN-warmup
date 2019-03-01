@@ -25,7 +25,7 @@ Following architectures are implemented in [RL](https://github.com/YigitDemirag/
 - [ ] Prioritized replay buffer
 - [ ] Agent comm module 
 
-![Internal Value Representation](data/val.png)
+![Internal Value Representation](pics/val.png)
 ## Installation
 
 NN-Warmup requires Python3, PyTorch, OpenAI Gym and OpenMPI. _Mujoco_ physics engine is optional but can be installed with [mujoco-py](https://github.com/openai/mujoco-py).
