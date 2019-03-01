@@ -14,9 +14,10 @@ Following architectures are implemented in [DL](https://github.com/YigitDemirag/
 # RL - Reinforcement Learning 
 Following architectures are implemented in [RL](https://github.com/YigitDemirag/NN-warmup/tree/master/RL) package:
 
-- [X] Vanilla Policy Gradient (VPG)
-- [X] Proximal Policy Optimization (PPO)
-- [ ] Deep Q Network (DQN)
+- [X] Vanilla Policy Gradient ([VPG](https://papers.nips.cc/paper/1713-policy-gradient-methods-for-reinforcement-learning-with-function-approximation.pdf))
+- [X] Proximal Policy Optimization ([PPO](https://arxiv.org/abs/1707.06347))
+- [ ] Deep Q Network ([DQN](https://www.nature.com/articles/nature14236))
+- [ ] World models ([WM](https://arxiv.org/abs/1803.10122))
 
 # Utilities
 - [X] MPI support
