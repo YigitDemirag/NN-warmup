@@ -73,4 +73,4 @@ for i, (x,y) in enumerate(test_load):
 print('Test Accuracy of the model on the 10000 test images: %.2f %%' % (100 * correct / 10000))
 
 # Save trained model
-torch.save(net.state_dict(), 'model.pkl')
+torch.save(net.state_dict(), 'data/model.pkl')
