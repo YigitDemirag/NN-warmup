@@ -1,7 +1,7 @@
 # Warmup for Neural Networks
 **Status:** Active (under active development, breaking changes may occur)
 
-This is my personal minimalistic neural network repository written in [PyTorch](https://pytorch.org/). Currently nothing fancy, nothing complex. Reinforcement learning side of this repo will be more active in the future. 
+This is my personal neural network repository written in [PyTorch](https://pytorch.org/). Currently nothing fancy, nothing complex. Reinforcement learning side of this repo will be more active in the future. 
 
 # DL - Deep Learning 
 Following architectures are implemented in [DL](https://github.com/YigitDemirag/NN-warmup/tree/master/DL) package:
