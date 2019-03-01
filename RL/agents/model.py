@@ -22,7 +22,7 @@ class ReplayBuffer:
         self.adv_buff = np.zeros((size), dtype=np.float32)
         self.start_ptr = 0
         self.gamma = 0.99
-        self.lam = 0.97
+        self.lam = 0.95
         self.ptr = 0
 
     def read(self, on_policy=True):
@@ -153,3 +153,13 @@ class mlp_actor_critic(nn.Module):
         pi, logp, logp_pi = self.p_net(x, a)
         v = self.v_net(x)
         return pi, logp, logp_pi, v
+
+"""
+DQN
+"""
+class dqn(nn.Module):
+    def __init__(self, x, hidden_sizes=(64,64), activation=torch.tanh,
+        output_activation=None, action_space=None):
+        super(dqn, self).__init__()
+
+        self.Q_net = MLP(x, list(hidden_sizes)+[1]) 

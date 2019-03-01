@@ -68,6 +68,7 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, ac_kwargs=dict(), seed=0, s
             a, _, logp, v = actor_critic(torch.Tensor(obs))
             rb.write(obs, logp, a, r, v)
             obs, r, done, _ = env.step(a.detach().numpy())
+
             ep_ret += r
             ep_len += 1
             
@@ -98,8 +99,8 @@ if __name__ == '__main__':
     from RL.utils.run_utils import setup_logger_kwargs
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='LunarLander-v2')
-    parser.add_argument('--cpu', type=int, default=8)
-    parser.add_argument('--hid', type=int, default=32)
+    parser.add_argument('--cpu', type=int, default=1)
+    parser.add_argument('--hid', type=int, default=64)
     parser.add_argument('--l', type=int, default=2)
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--exp_name', type=str, default='ppo')
@@ -117,7 +118,7 @@ if __name__ == '__main__':
         clip=0.2, 
         p_lr=3e-4, 
         v_lr=1e-3, 
-        ppo_epochs=80, 
+        ppo_epochs=10, 
         target_kl=0.01, 
         logger_kwargs=dict(), 
         save_freq=10)
