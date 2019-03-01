@@ -2,6 +2,7 @@
 *.pkl
 *-ubyte
 */*.pyc
+*/*.pyo
 __pycache__
 data/
 RL.egg-info/
@@ -9,3 +10,4 @@ RL.egg-info/
 *.mp4
 *.swp
 *.pyc
+*.pyo
