@@ -27,7 +27,7 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, ac_kwargs=dict(), seed=0, s
     local_steps_per_epoch = int(steps_per_epoch/num_procs())
     env = env_fn()
 
-    actor_critic = mlp_actor_critic(env.observation_space.shape, env.action_space.shape, action_space=env.action_space)
+    actor_critic = mlp_actor_critic(env.observation_space.shape,  action_space=env.action_space, **ac_kwargs)
     rb = ReplayBuffer(local_steps_per_epoch, env.observation_space.shape, env.action_space.shape)
     
     # Optimizers

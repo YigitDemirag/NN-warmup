@@ -102,7 +102,7 @@ class MLP(nn.Module):
 Policies
 '''
 class mlp_categorical_policy(nn.Module):
-    def __init__(self, x, a, hidden_sizes, activation, output_activation, action_space):
+    def __init__(self, x, hidden_sizes, activation, output_activation, action_space):
         super(mlp_categorical_policy, self).__init__()
         self.act_dim = action_space.n
         self.p_net = MLP(x, list(hidden_sizes)+[self.act_dim], activation, None)
@@ -116,7 +116,7 @@ class mlp_categorical_policy(nn.Module):
         return pi, logp, logp_pi
 
 class mlp_gaussian_policy(nn.Module):
-    def __init__(self, x, a, hidden_sizes, activation, output_activation, action_space):
+    def __init__(self, x, hidden_sizes, activation, output_activation, action_space):
         super(mlp_gaussian_policy, self).__init__()
         self.act_dim = action_space.shape[0]
         self.p_net = MLP(x, list(hidden_sizes)+[self.act_dim], activation, output_activation)
@@ -135,17 +135,16 @@ class mlp_gaussian_policy(nn.Module):
 MLP Actor-Critic
 """
 class mlp_actor_critic(nn.Module):
-    def __init__(self, x, a, hidden_sizes=(64,64), activation=torch.tanh, 
+    def __init__(self, x, hidden_sizes=(64,64), activation=torch.tanh, 
         output_activation=None, action_space=None):
         super(mlp_actor_critic, self).__init__()
-        
         # Policy Network 
         if isinstance(action_space, Box):
             print('Policy is Gaussian and action_space is Box.')
-            self.p_net = mlp_gaussian_policy(x, a, hidden_sizes, activation, output_activation, action_space)
+            self.p_net = mlp_gaussian_policy(x, hidden_sizes, activation, output_activation, action_space)
         elif isinstance(action_space, Discrete):
             print('Policy is Categorical and action_space is Discrete.')
-            self.p_net = mlp_categorical_policy(x, a, hidden_sizes, activation, output_activation, action_space)
+            self.p_net = mlp_categorical_policy(x, hidden_sizes, activation, output_activation, action_space)
 
         # Value Network
         self.v_net = MLP(x, list(hidden_sizes)+[1], activation, None) 
