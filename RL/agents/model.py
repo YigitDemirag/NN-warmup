@@ -22,7 +22,7 @@ class ReplayBuffer:
         self.adv_buff = np.zeros((size), dtype=np.float32)
         self.start_ptr = 0
         self.gamma = 0.99
-        self.lam = 0.95
+        self.lam = 0.97
         self.ptr = 0
 
     def read(self, on_policy=True):
