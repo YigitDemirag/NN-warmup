@@ -86,7 +86,7 @@ def run_policy(env, get_action, get_value, max_ep_len=None, num_episodes=100, re
             fig.canvas.blit(ax1.bbox)
             plt.pause(0.000000000001)
 
-        o, r, d, _ = env.step(a.data.numpy()[0])
+        o, r, d, _ = env.step(a.detach().numpy()[0])
         
         ep_ret += r
         ep_len += 1

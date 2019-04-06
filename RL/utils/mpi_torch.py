@@ -3,7 +3,7 @@ from RL.utils.mpi_tools import broadcast, mpi_avg
 
 
 def sync_all_params(param, root=0):
-    data = torch.nn.utils.parameters_to_vector(param).data.numpy()
+    data = torch.nn.utils.parameters_to_vector(param).data.detach().numpy()
     broadcast(data, root)
     torch.nn.utils.vector_to_parameters(torch.Tensor(data), param)
 

@@ -59,7 +59,7 @@ pip install -e .
 To see if you've successfully installed NN-warmup, try running PPO in the OpenAI Gym's `LunarLander-v2` environment with:
 
 ```
-python -m RL.run ppo --hid "[32,32]" --env LunarLander-v2 --exp_name initialtest --epoch 50
+python -m RL.run ppo --hid "[32,32]" --env LunarLander-v2 --exp_name initialtest --epochs 50
 ```
 
 After it finishes training, watch a video of the trained policy with:

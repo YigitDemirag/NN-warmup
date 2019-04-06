@@ -11,17 +11,17 @@ from RL.utils.mpi_torch import average_gradients, sync_all_params
 from RL.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 from RL.agents.model import ReplayBuffer, mlp_actor_critic
 
-def ppo(env_fn, actor_critic=model.mlp_actor_critic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000, 
-        epochs=50, clip=0.2, p_lr=3e-4, v_lr=1e-3, ppo_epochs=80, target_kl=0.01, logger_kwargs=dict(), save_freq=10):
+def dqn(env_fn, actor_critic=model.mlp_actor_critic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000, 
+        epochs=50, p_lr=3e-4, v_lr=1e-3, logger_kwargs=dict(), save_freq=10):
     """
-    Proximal Policy Optimization implemented with GAE-lambda advantage function.
+    Deep Q-Network implemented with GAE-lambda advantage function.
     """
     # Loggers
     logger = EpochLogger(**logger_kwargs)
     logger.save_config(locals())
     
     # Update the seed
-    seed += 10000*proc_id()
+    seed += 1000*proc_id()
     torch.manual_seed(seed)
 
     local_steps_per_epoch = int(steps_per_epoch/num_procs())
@@ -99,26 +99,23 @@ if __name__ == '__main__':
     from RL.utils.run_utils import setup_logger_kwargs
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='LunarLander-v2')
-    parser.add_argument('--cpu', type=int, default=1)
-    parser.add_argument('--hid', type=int, default=64)
+    parser.add_argument('--cpu', type=int, default=8)
+    parser.add_argument('--hid', type=int, default=32)
     parser.add_argument('--l', type=int, default=2)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--exp_name', type=str, default='ppo')
+    parser.add_argument('--exp_name', type=str, default='dqn')
     args = parser.parse_args()
     logger_kwargs = setup_logger_kwargs(args.exp_name, "0")
     
     mpi_fork(args.cpu)
    
-    ppo(lambda: gym.make(args.env), 
+    dqn(lambda: gym.make(args.env), 
         actor_critic=model.mlp_actor_critic, 
         ac_kwargs=dict(hidden_sizes=[args.hid] * args.l), 
         seed=0, 
         steps_per_epoch=4000, 
         epochs=50, 
-        clip=0.2, 
         p_lr=3e-4, 
         v_lr=1e-3, 
-        ppo_epochs=10, 
-        target_kl=0.01, 
         logger_kwargs=dict(), 
         save_freq=10)
