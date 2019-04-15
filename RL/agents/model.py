@@ -21,34 +21,25 @@ class ReplayBuffer:
         self.val_buff = np.zeros((size), dtype=np.float32)
         self.adv_buff = np.zeros((size), dtype=np.float32)
         self.start_ptr = 0
-        self.gamma = 0.99
-        self.lam = 0.97
         self.ptr = 0
+        self.gamma = 0.99
+        self.lam = 0.95
 
-    def read(self, on_policy=True):
+    def read(self):
         """
         Read from the replay buffer in any random time..
         """
-        #self.gae_lamb_adv()
-        if on_policy: # Returns the experience gathered with the latest policy.
-            sl = slice(self.start_ptr, self.ptr)
-            tmp = [self.o_buff[sl], self.logp_buff[sl], self.a_buff[sl], 
-                    self.rew_buff[sl], self.rew2g_buff[sl], self.val_buff[sl], self.adv_buff[sl]]     
-        else: # Returns the all experience buffer.
-            tmp = [self.o_buff, self.logp_buff, self.a_buff, 
+        # Returns the all experience buffer.
+        tmp = [self.o_buff, self.logp_buff, self.a_buff, 
                     self.rew_buff, self.rew2g_buff, self.val_buff, self.adv_buff]
 
-        self.start_ptr = self.ptr
         return [torch.Tensor(x) for x in tmp]
    
     def write(self, obs, logp, act, rew, val):
         """
         Write to replay buffer after every interaction with env.
         """
-        if self.ptr == self.size:
-            self.start_ptr = 0
-            self.ptr = 0 
-        
+        assert self.ptr < self.size
         self.o_buff[self.ptr] = obs
         self.logp_buff[self.ptr] = logp.detach().numpy()
         self.a_buff[self.ptr] = act.detach().numpy()
@@ -77,26 +68,33 @@ class ReplayBuffer:
         # Calculate rewards to go
         self.rew2g_buff[path_slice] = self.discount_cumsum(rews, self.gamma)[:-1]
 
-        # Normalize A with mu=0, std=1
-        adv_mean, adv_std = mpi_statistics_scalar(self.adv_buff)
-        self.adv_buff = (self.adv_buff-adv_mean)/adv_std
+        # Normalize all advantages in the buffer with mu=0, std=1
+        if self.ptr == self.size:
+            adv_mean, adv_std = mpi_statistics_scalar(self.adv_buff)
+            self.adv_buff = (self.adv_buff-adv_mean)/adv_std
+            self.start_ptr, self.ptr = 0, 0
+
+        # Forward to the next path 
+        self.start_ptr = self.ptr
 
 class MLP(nn.Module):
-    def __init__(self, x, hidden_sizes, activation=torch.tanh, output_activation=None):
+    def __init__(self, x, hidden_sizes, activation=torch.tanh, output_activation=None, output_squeeze=False):
         super(MLP, self).__init__()
         self.activation = activation
         self.output_activation = output_activation
-        self.layers = nn.ModuleList()  
+        self.layers = nn.ModuleList() 
+        self.output_squeeze = output_squeeze 
         print('Hidden sizes:')
         for i, h in enumerate([x[0]] + list(hidden_sizes[:-1])): # x has shape of (a, ) and hidden_sizes is (a,b,c,..)
             print((h, hidden_sizes[i]))
             self.layers.append(nn.Linear(h, hidden_sizes[i]))
-       
+            nn.init.zeros_(self.layers[i].bias)   
+ 
     def forward(self, x):
         for layer in self.layers[:-1]:
             x = self.activation(layer(x))
         x = self.output_activation(self.layers[-1](x)) if self.output_activation != None else self.layers[-1](x)
-        return x
+        return x.squeeze() if self.output_squeeze else x
 
 '''
 Policies
@@ -120,15 +118,15 @@ class mlp_gaussian_policy(nn.Module):
         super(mlp_gaussian_policy, self).__init__()
         self.act_dim = action_space.shape[0]
         self.p_net = MLP(x, list(hidden_sizes)+[self.act_dim], activation, output_activation)
-        self.log_std = nn.Parameter(-0.5*torch.ones(self.act_dim,dtype=torch.float32))
+        self.log_std = nn.Parameter(-0.5*torch.ones(self.act_dim, dtype=torch.float32))
 
     def forward(self, x, a=None):
         mu = self.p_net(x)
         policy = Normal(mu, self.log_std.exp())
 
         pi = policy.sample()
-        logp = policy.log_prob(a).sum(dim=1)  if torch.is_tensor(a) else None 
-        logp_pi = policy.log_prob(pi).sum()
+        logp = policy.log_prob(a).sum(dim=1) if torch.is_tensor(a) else None 
+        logp_pi = policy.log_prob(pi).sum(dim=1)
         return pi, logp, logp_pi
 
 """
@@ -138,6 +136,7 @@ class mlp_actor_critic(nn.Module):
     def __init__(self, x, hidden_sizes=(64,64), activation=torch.tanh, 
         output_activation=None, action_space=None):
         super(mlp_actor_critic, self).__init__()
+
         # Policy Network 
         if isinstance(action_space, Box):
             print('Policy is Gaussian and action_space is Box.')
@@ -147,7 +146,7 @@ class mlp_actor_critic(nn.Module):
             self.p_net = mlp_categorical_policy(x, hidden_sizes, activation, output_activation, action_space)
 
         # Value Network
-        self.v_net = MLP(x, list(hidden_sizes)+[1], activation, None) 
+        self.v_net = MLP(x, list(hidden_sizes)+[1], activation, None, output_squeeze=True) 
 
     def forward(self, x, a=None):
         pi, logp, logp_pi = self.p_net(x, a)
