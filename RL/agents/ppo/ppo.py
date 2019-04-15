@@ -28,7 +28,7 @@ def ppo(env_fn, actor_critic=model.mlp_actor_critic, ac_kwargs=dict(), seed=0, s
     local_steps_per_epoch = int(steps_per_epoch/num_procs())
     env = env_fn()
 
-    actor_critic = mlp_actor_critic(env.observation_space.shape,  action_space=env.action_space, **ac_kwargs)
+    actor_critic = mlp_actor_critic(env.observation_space.shape, action_space=env.action_space, **ac_kwargs)
     rb = ReplayBuffer(local_steps_per_epoch, env.observation_space.shape, env.action_space.shape)
 
     # Number of parameters
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     from RL.utils.run_utils import setup_logger_kwargs
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='LunarLander-v2')
-    parser.add_argument('--cpu', type=int, default=1)
+    parser.add_argument('--cpu', type=int, default=8)
     parser.add_argument('--hid', type=int, default=64)
     parser.add_argument('--l', type=int, default=2)
     parser.add_argument('--epochs', type=int, default=100)
